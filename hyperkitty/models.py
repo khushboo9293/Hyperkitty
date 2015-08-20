@@ -229,6 +229,16 @@ class MailingList(models.Model):
                 date__gte=begin_date, date__lt=end_date
             ).values("sender_id").distinct().count()
 
+
+    def get_participants(self, begin_date, end_date):
+        """Get list of senders who posted on the mailing list 
+        between begin_date and end_date"""
+
+        return self.emails.filter(
+                date__gte=begin_date, date__lt=end_date
+            ).values("sender_id").distinct()
+   
+
     def get_threads_between(self, begin_date, end_date):
         return self.threads.filter(
                 starting_email__date__lt=end_date,
