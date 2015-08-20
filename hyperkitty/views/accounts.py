@@ -91,7 +91,7 @@ def user_profile(request):
                         request.user.first_name, request.user.last_name)
                 mm_user.save()
             redirect_url = reverse('hk_user_profile')
-            redirect_url += "?msg=updated-ok"
+            redirect_url += "?msg=updated-ok" # TODO: Cookie-based flash msg
             return redirect(redirect_url)
     else:
         form = UserProfileForm(initial={
@@ -195,7 +195,7 @@ def subscriptions(request):
     profile = request.user.hyperkitty_profile
     mm_user_id = profile.get_mailman_user_id()
     subs = []
-    for mlist_name in profile.get_subscriptions():
+    for mlist_name in profile.get_subscriptions().keys():
         try:
             mlist = MailingList.objects.get(name=mlist_name)
         except MailingList.DoesNotExist:
@@ -260,12 +260,12 @@ def public_profile(request, user_id):
         likestatus = "likealot"
     elif likes - dislikes > 0:
         likestatus = "like"
-    # No email display on the public profile, we have enough spam
-    # as it is, thank you very much
-    #try:
-    #    email = unicode(mm_user.addresses[0])
-    #except KeyError:
-    #    email = None
+    # This is only used for the Gravatar. No email display on the public
+    # profile, we have enough spam as it is, thank you very much.
+    try:
+        email = unicode(mm_user.addresses[0])
+    except (KeyError, IndexError):
+        email = None
     fullname = mm_user.display_name
     if not fullname:
         fullname = Sender.objects.filter(mailman_id=user_id).exclude(name=""
@@ -282,6 +282,7 @@ def public_profile(request, user_id):
         "likes": likes,
         "dislikes": dislikes,
         "likestatus": likestatus,
+        "email": email,
     }
     return render(request, "hyperkitty/user_public_profile.html", context)
 

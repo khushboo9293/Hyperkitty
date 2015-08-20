@@ -186,8 +186,6 @@ def add_to_list(list_name, message):
 
 
 def set_sender_mailman_id(sender):
-    if sender.mailman_id is not None:
-        return
     try:
         sender.set_mailman_id()
     except MailmanConnectionError:

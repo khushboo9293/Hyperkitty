@@ -31,9 +31,10 @@ from mock import Mock
 from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 
-from hyperkitty.models import MailingList, ArchivePolicy
+from hyperkitty.models import (MailingList, ArchivePolicy, Sender, Thread,
+    Favorite)
 from hyperkitty.lib.incoming import add_to_list
-from hyperkitty.lib.mailman import FakeMMList
+from hyperkitty.lib.mailman import FakeMMList, FakeMMMember
 from hyperkitty.tests.utils import TestCase
 
 
@@ -67,6 +68,30 @@ class ListArchivesTestCase(TestCase):
                 }))
         self.assertEqual(response.status_code, 404)
 
+    def test_overview(self):
+        response = self.client.get(reverse('hk_list_overview', args=["list@example.com"]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["view_name"], "overview")
+        self.assertEqual(len(response.context["top_threads"]), 1)
+        self.assertEqual(len(response.context["most_active_threads"]), 1)
+        self.assertEqual(len(response.context["pop_threads"]), 0)
+
+    def test_overview_with_user(self):
+        user = User.objects.create_user('testuser', 'dummy@example.com', 'testPass')
+        sender = Sender.objects.get(address='dummy@example.com')
+        sender.mailman_id = "dummy"
+        sender.save()
+        mm_user = Mock()
+        mm_user.user_id = "dummy"
+        self.mailman_client.get_user.side_effect = lambda name: mm_user
+        self.client.login(username='testuser', password='testPass')
+        thread = Thread.objects.first()
+        Favorite.objects.create(thread=thread, user=user)
+        response = self.client.get(reverse('hk_list_overview', args=["list@example.com"]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context["threads_posted_to"]), 1)
+        self.assertEqual(len(response.context["flagged_threads"]), 1)
+
 
 class PrivateArchivesTestCase(TestCase):
 
@@ -88,7 +113,9 @@ class PrivateArchivesTestCase(TestCase):
         self.mm_user = Mock()
         self.mm_user.user_id = "dummy"
         self.mailman_client.get_user.side_effect = lambda name: self.mm_user
-        self.mm_user.subscription_list_ids = ["list@example.com",]
+        self.mm_user.subscriptions = [
+            FakeMMMember("list@example.com", self.user.email),
+        ]
 
     def tearDown(self):
         self.client.logout()

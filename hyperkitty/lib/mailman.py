@@ -31,6 +31,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class ModeratedListException(Exception):
+    pass
+
+
 MailmanClient = Client
 def get_mailman_client():
     # easier to patch during unit tests
@@ -46,19 +50,37 @@ def subscribe(list_address, user):
     rest_list = client.get_list(list_address)
     subscription_policy = rest_list.settings.get(
         "subscription_policy", "moderate")
-    if subscription_policy in ("moderate", "confirm_then_moderate"):
-        return # We don't want to bypass moderation, don't subscribe
+    # Add a flag to return that would tell the user they have been subscribed to
+    # the current list.
+    subscribed_now = False
     try:
         member = rest_list.get_member(user.email)
     except ValueError:
+        # We don't want to bypass moderation, don't subscribe. Instead
+        # raise an error so that it can be caught to show the user
+        if subscription_policy in ("moderate", "confirm_then_moderate"):
+            raise ModeratedListException("This list is moderated, please subscribe"
+                                         " to it before posting.")
+
         # not subscribed yet, subscribe the user without email delivery
         member = rest_list.subscribe(user.email,
                 "%s %s" % (user.first_name, user.last_name),
                 pre_verified=True, pre_confirmed=True)
+        # The result can be a Member object or a dict if the subscription can't
+        # be done directly, or if it's pending, or something else.
+        # Broken API :-(
+        if isinstance(member, dict):
+            logger.info("Subscription for %s to %s is pending",
+                        user.email, list_address)
+            return subscribed_now
         member.preferences["delivery_status"] = "by_user"
         member.preferences.save()
+        subscribed_now = True
         cache.delete("User:%s:subscriptions" % user.id)
+        logger.info("Subscribing %s to %s on first post",
+                    user.email, list_address)
 
+    return subscribed_now
 
 class FakeMMList:
     def __init__(self, name):
@@ -71,8 +93,13 @@ class FakeMMList:
             "archive_policy": "public",
             }
 
+class FakeMMMember:
+    def __init__(self, list_id, address):
+        self.list_id = list_id
+        self.address = address
 
-def sync_with_mailman():
+
+def sync_with_mailman(overwrite=False):
     from hyperkitty.models import MailingList, Sender
     for mlist in MailingList.objects.all():
         mlist.update_from_mailman()
@@ -80,13 +107,15 @@ def sync_with_mailman():
     # There can be thousands of senders, break into smaller chuncks to avoid
     # hogging up the memory
     buffer_size = 1000
-    query = Sender.objects.filter(mailman_id__isnull=True)
+    query = Sender.objects.all()
+    if not overwrite:
+        query = query.filter(mailman_id__isnull=True)
     prev_count = query.count()
     lower_bound = 0
     upper_bound = buffer_size
     while True:
         try:
-            for sender in query[lower_bound:upper_bound]:
+            for sender in query.all()[lower_bound:upper_bound]:
                 sender.set_mailman_id()
         except MailmanConnectionError:
             break # Can't refresh at this time

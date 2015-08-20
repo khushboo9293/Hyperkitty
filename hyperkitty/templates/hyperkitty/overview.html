@@ -62,6 +62,18 @@
 
         <div class="row">
             <a id="home"></a>
+            <div class="list-actions col-tn-6 col-sm-4" {% if not user.is_authenticated %}title="{% trans 'You must be logged-in to create a thread.' %}"{% endif %}>
+                <a href="{% url "hk_message_new" mlist_fqdn=mlist.name %}"
+                    class="btn btn-default{% if not user.is_authenticated %} disabled{% endif %}">
+                    <i class="fa fa-plus"></i>
+                    <span class="hidden-tn hidden-xs">Start a n</span><span class="hidden-sm hidden-md hidden-lg">N</span>ew thread
+                </a>
+                {% if postorius_installed %}
+                <a class="btn btn-default" href="{{ postorius_installed }}/{{ mlist.name }}">
+                  <i class="fa fa-inbox"></i>
+                  Subscribe<span class="hidden-tn hidden-xs"> to this list</span></a>
+                {% endif %}
+            </div>
             <form name="search" method="get" action="{% url 'hk_search' %}" class="searchbar col-tn-8 col-xs-4 hidden-sm hidden-md hidden-lg" role="search">
                 {% if mlist %}<input type="hidden" name="list" value="{{ mlist.name }}" />{% endif %}
                 <input id="nav-tab-search" name="query" type="text" class="form-control"
@@ -69,13 +81,6 @@
                        {% if query %}value="{{ query }}"{% endif %}
                        />
             </form>
-            <div class="thread-new col-tn-6 col-sm-4" {% if not user.is_authenticated %}title="{% trans 'You must be logged-in to create a thread.' %}"{% endif %}>
-                <a href="{% url "hk_message_new" mlist_fqdn=mlist.name %}"
-                    class="btn btn-default{% if not user.is_authenticated %} disabled{% endif %}">
-                    <i class="fa fa-plus"></i>
-                    <span class="hidden-tn hidden-xs">Start a n</span><span class="hidden-sm hidden-md hidden-lg">N</span>ew thread
-                </a>
-            </div>
         </div> <!-- /container, navbar & search (tiny/xs screens), new thread button -->
     </div> <!-- /container, title/description + the elements above -->
 
@@ -174,12 +179,20 @@
                     #{{forloop.counter}}
                 </div>
                 <div class="inline-block gravatar col-tn-3 col-xs-4 col-md-3">
-                    {% gravatar poster.address 40 %}
+                    {% gravatar poster.address 120 %}
                     <br />
                 </div>
                 <div class="gravatar-details inline-block col-tn-7 col-xs-6 col-md-7">
                     <ul class="list-unstyled">
-                        <li><span class="maker-name">{{ poster.name }}</span></li>
+                        <li><span class="maker-name">
+                            {% if poster.mailman_id %}
+                            <a href="{% url 'hk_public_user_profile' user_id=poster.mailman_id %}"
+                               title="{% trans "See the profile" %}"
+                                >{{ poster.name|escapeemail }}</a>
+                            {% else %}
+                                {{ poster.name|escapeemail }}
+                            {% endif %}
+                        </span></li>
                         <li><span class="score">{{ poster.count }}</span> {% trans "posts" %}</li>
                     </ul>
                 </div>
@@ -198,7 +211,7 @@
                 </div>
                 <div class="inline-block gravatar col-tn-3 col-xs-4 col-md-3">
                     {% if author.email %}
-                    {% gravatar author.email 40 %}
+                    {% gravatar author.email 120 %}
                     <br />
                     {% endif %}
                 </div>

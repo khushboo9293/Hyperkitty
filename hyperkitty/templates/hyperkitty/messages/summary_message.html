@@ -21,10 +21,10 @@
                 <div class="gravatar col-tn-3 col-xs-2 col-lg-1">
                     {% if message.sender.mailman_id %}
                     <a href="{% url 'hk_public_user_profile' user_id=message.sender.mailman_id %}"
-                       title="{% trans 'See the profile for {{ message.sender.name|escapeemail|escape }}' %}">
+                       title="{% blocktrans with name=email.sender.name|escapeemail|escape %}See the profile for {{ name }}{% endblocktrans %}">
                     {% endif %}
                     {% if message.sender.address %}
-                    {% gravatar message.sender.address 40 %}
+                    {% gravatar message.sender.address 120 %}
                     <br />
                     {% endif %}
                     {{ message.sender.name|escapeemail }}

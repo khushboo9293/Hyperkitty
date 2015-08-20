@@ -48,7 +48,6 @@ def get_list_by_name(list_name, domain):
 
 def month_name_to_num(month_name):
     """map month names to months numbers"""
-    today = datetime.date.today()
-    months = dict( (today.replace(month=num).strftime('%B'), num)
+    months = dict( (datetime.date(2000, num, 1).strftime('%B'), num)
                    for num in range(1, 12) )
     return months[month_name]

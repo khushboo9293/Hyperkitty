@@ -30,7 +30,7 @@ from django.contrib.auth.models import User
 from django.core.urlresolvers import reverse
 
 from hyperkitty.lib.incoming import add_to_list
-from hyperkitty.lib.mailman import FakeMMList
+from hyperkitty.lib.mailman import FakeMMList, FakeMMMember
 from hyperkitty.models import MailingList, ArchivePolicy
 from hyperkitty.tests.utils import SearchEnabledTestCase
 
@@ -68,7 +68,9 @@ class SearchViewsTestCase(SearchEnabledTestCase):
         mm_mlist = FakeMMList("private@example.com")
         mm_mlist.settings["archive_policy"] = "private"
         self.mailman_client.get_list.side_effect = lambda name: mm_mlist
-        self.mm_user.subscription_list_ids = ["private@example.com",]
+        self.mm_user.subscriptions = [
+            FakeMMMember("private@example.com", self.user.email),
+        ]
         self._send_message(mlist)
         response = self.client.get(reverse("hk_search"),
             {"q": "dummy", "mlist": "private@example.com"})
@@ -100,7 +102,9 @@ class SearchViewsTestCase(SearchEnabledTestCase):
         mailman_lists["private-sub@example.com"].settings["archive_policy"] = "private"
         self.mailman_client.get_list.side_effect = lambda name: mailman_lists[name]
         # Subscribe the user to one of the private lists
-        self.mm_user.subscription_list_ids = ["private-sub@example.com",]
+        self.mm_user.subscriptions = [
+            FakeMMMember("private-sub@example.com", self.user.email),
+        ]
         # Populate the lists with messages
         self._send_message(mlist_public)
         self._send_message(mlist_private)

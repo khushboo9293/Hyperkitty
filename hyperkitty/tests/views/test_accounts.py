@@ -36,7 +36,7 @@ from django.test.utils import override_settings
 
 from hyperkitty.lib.utils import get_message_id_hash
 from hyperkitty.lib.incoming import add_to_list
-from hyperkitty.lib.mailman import FakeMMList
+from hyperkitty.lib.mailman import FakeMMList, FakeMMMember
 from hyperkitty.models import (LastView, MailingList, Thread,
     Email, Favorite)
 from hyperkitty.tests.utils import TestCase
@@ -57,7 +57,12 @@ class AccountViewsTestCase(TestCase):
         msg.set_payload("Dummy content")
         return add_to_list("list@example.com", msg)
 
-    def test_login(self):
+    def test_login_page(self):
+        # Try to access the login page
+        response = self.client.get(reverse("hk_user_login"))
+        self.assertEqual(response.status_code, 200)
+
+    def test_redirect_to_login(self):
         # Try to access user profile (private data) without logging in
         response = self.client.get(reverse("hk_user_profile"))
         self.assertRedirects(response,
@@ -234,9 +239,9 @@ class LastViewsTestCase(TestCase):
 
     def test_overview(self):
         response = self.client.get(reverse('hk_list_overview', args=["list@example.com"]))
-        # 2 in posted to, 2 in recently active, 2 in most active
+        # 2 in recently active, 2 in most active
         self.assertContains(response, "fa-envelope",
-                            count=6, status_code=200)
+                            count=4, status_code=200)
 
 
 
@@ -253,7 +258,9 @@ class SubscriptionsTestCase(TestCase):
 
     def test_get_subscriptions(self):
         mlist = MailingList.objects.create(name="test@example.com")
-        self.mm_user.subscription_list_ids = ["test@example.com",]
+        self.mm_user.subscriptions = [
+            FakeMMMember("test@example.com", self.user.email),
+        ]
         self.client.login(username='testuser', password='testPass')
         response = self.client.get(reverse("hk_user_subscriptions"))
         self.assertEqual(response.context["subscriptions"],

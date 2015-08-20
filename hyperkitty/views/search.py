@@ -60,7 +60,8 @@ def search(request):
             archive_policy=ArchivePolicy.private.value)
         if request.user.is_authenticated():
             subscriptions = request.user.hyperkitty_profile.get_subscriptions()
-            excluded_mlists = excluded_mlists.exclude(name__in=subscriptions)
+            excluded_mlists = excluded_mlists.exclude(
+                name__in=subscriptions.keys())
         excluded_mlists = excluded_mlists.values_list("name", flat=True)
         sqs = sqs.exclude(mailinglist__in=excluded_mlists)
 

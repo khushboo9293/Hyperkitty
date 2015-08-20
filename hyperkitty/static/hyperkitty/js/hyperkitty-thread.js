@@ -198,6 +198,7 @@ function setup_replies(baseElem) {
     });
     $(baseElem).find(".reply-form button[type='submit']").click(function(e) {
         e.preventDefault();
+        var button = $(this);
         var form = $(this).parents("form").first();
         // remove previous error messages
         form.find("div.reply-result").remove();
@@ -227,8 +228,12 @@ function setup_replies(baseElem) {
                   + '<button type="button" class="close" data-dismiss="alert">&times;</button> '
                   + jqXHR.responseText + '</div></div>')
                     .css("display", "none").prependTo(form).slideDown();
+            },
+            complete: function(jqXHR, textStatus) {
+                button.prop("disabled", false);
             }
         });
+        button.prop("disabled", true);
     });
     $(baseElem).find(".reply-form a.cancel").click(function(e) {
         e.preventDefault();

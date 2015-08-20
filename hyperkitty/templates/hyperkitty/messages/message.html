@@ -9,13 +9,13 @@
     <div id="{{email.message_id_hash}}" class="email-header">
         <div class="gravatar-wrapper">
             <div class="gravatar">
-                {% gravatar email.sender.address 40 %}
+                {% gravatar email.sender.address 120 %}
             </div>
             <div class="email-author">
                 <span class="name">
                     {% if email.sender.mailman_id %}
                     <a href="{% url 'hk_public_user_profile' user_id=email.sender.mailman_id %}"
-                       title="{% trans 'See the profile for {{ email.sender.name|escapeemail|escape }}' %}"
+                       title="{% blocktrans with name=email.sender.name|escapeemail|escape %}See the profile for {{ name }}{% endblocktrans %}"
                        >{{email.sender.name|default:"(no name)"|escapeemail}}</a>
                     {% else %}
                        {{email.sender.name|default:"(no name)"|escapeemail}}

@@ -120,7 +120,7 @@ class MessageViewsTestCase(TestCase):
         self.assertContains(response, "Dummy Subject", count=3)
         self.assertNotContains(response, "dummy@example.com")
         self.assertContains(response,
-            get_gravatar_url("dummy@example.com", 40).replace("&", "&amp;"))
+            get_gravatar_url("dummy@example.com", 120).replace("&", "&amp;"))
         self.assertContains(response, "list@example.com")
         self.assertContains(response, url)
         sender_time = '<span title="Sender\'s time: 2015-02-02 13:00:00">10:00:00</span>'
@@ -141,7 +141,7 @@ class MessageViewsTestCase(TestCase):
         self.assertIn("Django User", result["message_html"])
         self.assertIn("dummy reply content", result["message_html"])
         self.assertIn(
-            get_gravatar_url("test@example.com", 40).replace("&", "&amp;"),
+            get_gravatar_url("test@example.com", 120).replace("&", "&amp;"),
             result["message_html"])
         self.assertEqual(len(mail.outbox), 1)
         #print(mail.outbox[0].message())

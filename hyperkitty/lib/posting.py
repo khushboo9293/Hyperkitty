@@ -31,6 +31,22 @@ class PostingFailed(Exception):
     pass
 
 
+def get_sender(request, mlist):
+    # Fallback to the logged-in user
+    address = request.user.email
+    display_name = "%s %s" % (request.user.first_name, request.user.last_name)
+    # Try to get the email used to susbscribe to the list
+    subscriptions = request.user.hyperkitty_profile.get_subscriptions()
+    if mlist.name in subscriptions:
+        address = subscriptions[mlist.name]
+        # Get the display_name from the Address in Mailman? And if not found,
+        # from the User in Mailman?
+    if display_name.strip():
+        return '"%s" <%s>' % (display_name, address)
+    else:
+        return address
+
+
 def post_to_list(request, mlist, subject, message, headers=None,
                  attachments=None):
     if not mlist:
@@ -40,18 +56,13 @@ def post_to_list(request, mlist, subject, message, headers=None,
         headers = {}
     # Check that the user is subscribed
     try:
-        mailman.subscribe(mlist.name, request.user)
+        subscribed_now = mailman.subscribe(mlist.name, request.user)
     except MailmanConnectionError:
         raise PostingFailed("Can't connect to Mailman's REST server, "
                             "your message has not been sent.")
     # send the message
     headers["User-Agent"] = "HyperKitty on %s" % request.build_absolute_uri("/")
-    if not request.user.first_name and not request.user.last_name:
-        from_email = request.user.email
-    else:
-        from_email = '"%s %s" <%s>' % (request.user.first_name,
-                                       request.user.last_name,
-                                       request.user.email)
+    from_email = get_sender(request, mlist)
     msg = EmailMessage(
                subject=subject,
                body=message,
@@ -67,6 +78,7 @@ def post_to_list(request, mlist, subject, message, headers=None,
             msg.attach(attach.name, attach.read())
     # XXX: Inject into the incoming queue instead?
     msg.send()
+    return subscribed_now
 
 
 def reply_subject(subject):

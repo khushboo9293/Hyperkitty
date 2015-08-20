@@ -273,12 +273,12 @@ def tags(request, mlist_fqdn, threadid):
 def suggest_tags(request, mlist_fqdn, threadid):
     term = request.GET.get("term")
     current_tags = Tag.objects.filter(
-            threads__mailing_list__name=mlist_fqdn,
+            threads__mailinglist__name=mlist_fqdn,
             threads__thread_id=threadid
         ).values_list("name", flat=True)
     if term:
         tags_db = Tag.objects.filter(
-            threads__mailing_list__name=mlist_fqdn,
+            threads__mailinglist__name=mlist_fqdn,
             name__istartswith=term)
     else:
         tags_db = Tag.objects.all()

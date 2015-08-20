@@ -114,8 +114,11 @@ class Profile(models.Model):
         mm_user = self.get_mailman_user()
         if mm_user:
             # TODO: caching?
-            addresses.update(mm_user.addresses)
-        return list(sorted(addresses))
+            # (mailman client returns str, must convert to deduplicate)
+            addresses.update([unicode(a) for a in mm_user.addresses])
+        addresses = list(addresses)
+        addresses.sort()
+        return addresses
 
     def get_votes_in_list(self, list_name):
         # TODO: Caching ?
@@ -144,7 +147,7 @@ class Profile(models.Model):
         mm_user = self.get_mailman_user()
         if mm_user is None:
             return None
-        return mm_user.user_id
+        return unicode(mm_user.user_id)
 
     def get_subscriptions(self):
         def _get_value():
@@ -152,14 +155,14 @@ class Profile(models.Model):
             if mm_user is None:
                 return []
             mm_client = get_mailman_client()
-            sub_names = set()
-            for mlist_id in mm_user.subscription_list_ids:
-                mlist_name = mm_client.get_list(mlist_id).fqdn_listname
+            subscriptions = {}
+            for member in mm_user.subscriptions:
+                mlist_name = mm_client.get_list(member.list_id).fqdn_listname
                 ## de-duplicate subscriptions
                 #if mlist_name in [ s["list_name"] for s in sub_names ]:
                 #    continue
-                sub_names.add(mlist_name)
-            return list(sorted(sub_names))
+                subscriptions[mlist_name] = member.address
+            return subscriptions
         # TODO: how should this be invalidated? Subscribe to a signal in
         # mailman when a new subscription occurs? Or store in the session?
         return cache.get_or_set(
@@ -335,7 +338,15 @@ class Sender(models.Model):
             client = get_mailman_client()
             mm_user = client.get_user(self.address)
         except HTTPError as e:
+            if e.code == 404:
+                return # User not found in Mailman
             raise MailmanConnectionError(e) # normalize all possible error types
+        except ValueError as e:
+            # This smells like a badly formatted email address (saw it in the wild)
+            logger.warning(
+                "Invalid response when getting user %s from Mailman",
+                self.address)
+            return # Ignore it
         self.mailman_id = mm_user.user_id
         self.save()
         ## Go further and associate the user's other addresses?

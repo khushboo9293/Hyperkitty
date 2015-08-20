@@ -44,28 +44,32 @@ class Job(BaseJob):
     when = "minutely"
 
     def execute(self):
-        lock = PIDLockFile(getattr(
-            settings, "HYPERKITTY_JOBS_UPDATE_INDEX_LOCKFILE",
-            os.path.join(gettempdir(), "hyperkitty-jobs-update-index.lock")))
-        try:
-            lock.acquire(timeout=-1)
-        except AlreadyLocked:
-            if check_pid(lock.read_pid()):
-                logger.warning("The job 'update_index' is already running")
-                return
-            else:
-                lock.break_lock()
-                lock.acquire(timeout=-1)
-        except LockFailed as e:
-            logger.warning("Could not obtain a lock for the 'update_index' "
-                           "job (%s)", e)
+        run_with_lock(remove=False)
+
+
+def run_with_lock(remove=False):
+    lock = PIDLockFile(getattr(
+        settings, "HYPERKITTY_JOBS_UPDATE_INDEX_LOCKFILE",
+        os.path.join(gettempdir(), "hyperkitty-jobs-update-index.lock")))
+    try:
+        lock.acquire(timeout=-1)
+    except AlreadyLocked:
+        if check_pid(lock.read_pid()):
+            logger.warning("The job 'update_index' is already running")
             return
-        try:
-            update_index()
-        except Exception as e: # pylint: disable-msg=broad-except
-            logger.exception("Failed to update the fulltext index: %s", e)
-        finally:
-            lock.release()
+        else:
+            lock.break_lock()
+            lock.acquire(timeout=-1)
+    except LockFailed as e:
+        logger.warning("Could not obtain a lock for the 'update_index' "
+                       "job (%s)", e)
+        return
+    try:
+        update_index(remove=remove)
+    except Exception as e: # pylint: disable-msg=broad-except
+        logger.exception("Failed to update the fulltext index: %s", e)
+    finally:
+        lock.release()
 
 
 def check_pid(pid):

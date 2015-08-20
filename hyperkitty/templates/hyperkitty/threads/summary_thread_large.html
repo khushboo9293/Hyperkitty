@@ -31,7 +31,7 @@
                 </div>
                 <div class="gravatar col-tn-3 col-xs-2 col-lg-1">
                     {% if starting_email.sender.address %}
-                    {% gravatar starting_email.sender.address 40 %}
+                    {% gravatar starting_email.sender.address 120 %}
                     <br />
                     {% endif %}
                     {{ starting_email.sender.name|escapeemail }}

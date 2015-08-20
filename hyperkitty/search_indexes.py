@@ -48,9 +48,13 @@ class EmailIndex(indexes.SearchIndex, indexes.Indexable):
         return self.get_model().objects.all().select_related("sender", "thread")
 
 
-def update_index():
+def update_index(remove=False):
     """
     Update the search index with the new emails since the last index update.
+
+    Setting remove to True is extremely slow, it needs to scan the entire
+    index and database. It takes about 15 minutes on Fedora's lists, so it is
+    not fit for a frequent operation.
     """
     update_cmd = UpdateIndexCommand()
     # Find the last email in the index:
@@ -60,14 +64,12 @@ def update_index():
         # Different backends can raise different exceptions unfortunately
         update_cmd.start_date = None
     else:
-        update_cmd.start_date = last_email.object.archived_date
+        update_cmd.start_date = last_email.archived_date
     # set defaults
     update_cmd.verbosity = 0
     update_cmd.batchsize = None
     update_cmd.end_date = None
     update_cmd.workers = 0
-    # Setting remove to True is extremely slow, it needs to scan the entire
-    # index and database. About 15 minutes on Fedora's lists, so not for a
-    # frequent operation.
-    update_cmd.remove = False
+    update_cmd.commit = True
+    update_cmd.remove = remove
     update_cmd.update_backend("hyperkitty", "default")

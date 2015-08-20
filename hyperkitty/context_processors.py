@@ -44,6 +44,7 @@ def postorius_info(request):
     if "postorius" in settings.INSTALLED_APPS:
         try:
             postorius_url = reverse("postorius.views.list_index")
+            postorius_url = postorius_url.rstrip("/")
         except NoReverseMatch:
             pass
     return {"postorius_installed": postorius_url }

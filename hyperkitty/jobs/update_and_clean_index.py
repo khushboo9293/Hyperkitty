@@ -20,28 +20,18 @@
 # Author: Aurelien Bompard <abompard@fedoraproject.org>
 
 """
-Sync properties from Mailman into HyperKitty
+Update the full-text index
 """
 
 from __future__ import absolute_import, print_function, unicode_literals
 
-from optparse import make_option
-
-from django.core.management.base import BaseCommand, CommandError
-from hyperkitty.lib.mailman import sync_with_mailman
-from hyperkitty.management.utils import setup_logging
+from django_extensions.management.jobs import BaseJob
+from hyperkitty.jobs.update_index import run_with_lock
 
 
-class Command(BaseCommand):
-    help = "Sync properties from Mailman into HyperKitty"
-    option_list = BaseCommand.option_list + (
-        make_option('--overwrite', action='store_true', default=False,
-            help="overwrite existing Mailman IDs in HyperKitty's database"),
-        )
+class Job(BaseJob):
+    help = "Update the full-text index and clean old entries"
+    when = "daily"
 
-    def handle(self, *args, **options):
-        options["verbosity"] = int(options.get("verbosity", "1"))
-        setup_logging(self, options["verbosity"])
-        if args:
-            raise CommandError("no arguments allowed")
-        sync_with_mailman(overwrite=options.get("overwrite", False))
+    def execute(self):
+        run_with_lock(remove=True)

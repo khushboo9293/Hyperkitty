@@ -170,8 +170,12 @@ def overview(request, mlist_fqdn=None):
         favorites = [ f.thread for f in Favorite.objects.filter(
             thread__mailinglist=mlist, user=request.user) ]
         mm_user_id = request.user.hyperkitty_profile.get_mailman_user_id()
-        threads_posted_to = mlist.threads.filter(
-            emails__sender__mailman_id=mm_user_id).distinct()
+        threads_posted_to = []
+        if mm_user_id is not None:
+            for thread in threads:
+                senders = set([e.sender.mailman_id for e in thread.emails.all()])
+                if mm_user_id in senders:
+                    threads_posted_to.append(thread)
     else:
         favorites = []
         threads_posted_to = []

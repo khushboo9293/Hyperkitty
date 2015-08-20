@@ -63,8 +63,9 @@ class TestCase(DjangoTestCase):
         super(TestCase, self)._pre_setup()
         # Override settings
         self._old_settings = {}
-        self._override_settings.update(self.override_settings)
-        for key, value in self._override_settings.items():
+        override_settings = self._override_settings.copy()
+        override_settings.update(self.override_settings)
+        for key, value in override_settings.items():
             self._old_settings[key] = getattr(settings, key, None)
             setattr(settings, key, value)
         #if DJANGO_VERSION[:2] < (1, 7):

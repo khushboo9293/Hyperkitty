@@ -28,7 +28,6 @@ from __future__ import absolute_import, print_function, unicode_literals, divisi
 import mailbox
 import os
 import re
-import logging
 from datetime import datetime
 from optparse import make_option
 from email.utils import unquote
@@ -47,6 +46,7 @@ from hyperkitty.lib.incoming import add_to_list, DuplicateMessage
 from hyperkitty.lib.mailman import sync_with_mailman
 from hyperkitty.lib.analysis import compute_thread_order_and_depth
 from hyperkitty.lib.utils import get_message_id
+from hyperkitty.management.utils import setup_logging
 from hyperkitty.models import Email, Thread
 
 
@@ -225,12 +225,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self._check_options(args, options)
-        # logging
-        if options["verbosity"] >= 3:
-            debuglevel = logging.DEBUG
-        else:
-            debuglevel = logging.INFO
-        logging.basicConfig(format='%(message)s', level=debuglevel)
+        setup_logging(self, options["verbosity"])
         # main
         list_address = options["list_address"].lower()
         ## Keep autocommit on SQLite:

@@ -29,12 +29,12 @@ import os
 import urllib2
 import gzip
 import itertools
-import logging
 from multiprocessing import Pool
 from datetime import date
 from optparse import make_option
 
 from django.core.management.base import BaseCommand, CommandError
+from hyperkitty.management.utils import setup_logging
 
 
 MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July',
@@ -107,12 +107,6 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         self._check_options(args, options)
-        # logging
-        if options["verbosity"] >= 3:
-            debuglevel = logging.DEBUG
-        else:
-            debuglevel = logging.INFO
-        logging.basicConfig(format='%(message)s', level=debuglevel)
-
+        setup_logging(self, options["verbosity"])
         p = Pool(5)
         p.map(_archive_downloader, itertools.product([options], options["start"], MONTHS))
